@@ -89,6 +89,7 @@ app.use(koaBody({
   muitipark: true
 }));
 
+// 日志接口
 router.all('/log', async (ctx) => {
   let param = {};
   if (ctx.request.method == "GET") {
@@ -114,6 +115,7 @@ router.all('/log', async (ctx) => {
   }
 });
 
+// 计数
 router.all('/count', async (ctx) => {
   let param = {};
   if (ctx.request.method == "GET") {
@@ -137,6 +139,7 @@ router.all('/count', async (ctx) => {
   }
 });
 
+// 获取日志
 router.post('/record/getList', async (ctx) => {
   let param = ctx.request.body;
   let totalLines = 0;
@@ -177,6 +180,7 @@ router.post('/record/getList', async (ctx) => {
   }
 });
 
+// 获取计数
 router.post('/record/getCount', async (ctx) => {
   let param = ctx.request.body;
   let date = format(new Date(), "YYYY-MM-DD");
