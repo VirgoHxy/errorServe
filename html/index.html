@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>错误监控平台</title>
+  <link rel="stylesheet" href="./element/element.css">
+  <style>
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      font-weight: inherit;
+      font-style: inherit;
+      font-family: inherit;
+      font-size: 92.5%;
+      vertical-align: baseline;
+      text-align: center;
+      color: #000;
+    }
+
+    div,
+    h1,
+    h3 {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    h1,
+    h3 {
+      color: #333;
+    }
+
+    #app,
+    .homePage {
+      height: 100%;
+    }
+
+    .homePage .el-table--striped .el-table__body tr.el-table__row--striped td {
+      background-color: #eee;
+    }
+
+    .homePage {
+      background-color: transparent !important;
+      border-style: none !important;
+    }
+
+    .homePage .baseData {
+      display: flex;
+      flex-wrap: nowrap;
+      height: 300px;
+      padding: 10px;
+    }
+
+    .homePage .baseData .countArea {
+      width: 700px;
+      box-shadow: 0 2px 12px 0 #ddd;
+      background-color: #fff;
+      border-radius: 6px;
+    }
+
+    .homePage .baseData .detailList {
+      height: 100%;
+      width: calc(100% - 700px);
+      overflow: hidden;
+      padding: 20px 0;
+      margin-left: 20px;
+      box-shadow: 0 2px 12px 0 #ddd;
+      background-color: #fff;
+      border-radius: 6px;
+    }
+
+    .homePage .recordList {
+      overflow: hidden;
+      height: calc(100% - 310px);
+      min-height: 300px;
+      margin: 10px 10px 0 10px;
+      padding: 20px 0;
+      box-shadow: 0 2px 12px 0 #ddd;
+      background-color: #fff;
+      border-radius: 6px;
+    }
+
+    .homePage .shadow {
+      position: fixed;
+      z-index: -1;
+      opacity: 0;
+      width: 100%;
+      height: 100%;
+      top: 0;
+      left: 0;
+      background-color: rgba(255, 255, 255, 0.8);
+      transition: all 0.4s cubic-bezier(0.76, 0, 0.24, 1);
+    }
+
+    .homePage .shadow>div {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      margin: auto;
+      text-align: center;
+      color: #409EFF;
+      font-size: 20px;
+      height: 28px;
+      line-height: 28px;
+    }
+
+    .homePage .shadow.active {
+      z-index: 100;
+      opacity: 1;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="app" style="display: none;" :style="{display: 'block'}">
+    <div class="homePage" @mousemove="moveFlag && closeGetData()">
+      <div class="baseData">
+        <div class="countArea"></div>
+        <div class="detailList">
+          <h3>错误详情表</h3>
+          <el-table :data="detailList" stripe height="calc(100% - 27px)">
+            <el-table-column prop="count" label="错误数量" width="100"></el-table-column>
+            <el-table-column prop="message" label="错误详情信息"></el-table-column>
+          </el-table>
+        </div>
+      </div>
+      <div class="recordList">
+        <h1>错误记录表</h1>
+        <el-table :data="recordList" stripe height="calc(100% - 45px)">
+          <el-table-column prop="id" label="唯一标识" width="200"></el-table-column>
+          <el-table-column prop="message" label="错误信息"></el-table-column>
+          <el-table-column prop="url" label="错误位置"></el-table-column>
+          <el-table-column prop="detailMessage" label="错误详情"></el-table-column>
+          <el-table-column prop="device" label="设备" width="320"></el-table-column>
+          <el-table-column prop="param" label="请求错误参数"></el-table-column>
+          <el-table-column prop="useTime" label="请求花费时间" width="120"></el-table-column>
+          <el-table-column prop="location" label="错误页面路由"></el-table-column>
+        </el-table>
+      </div>
+      <div class="shadow">
+        <div>系统处于休眠状态,移动鼠标退出休眠</div>
+      </div>
+    </div>
+  </div>
+  <script src="./script/axios.min.js"></script>
+  <script src="./script/vue.js"></script>
+  <script src="./script/date.js"></script>
+  <script src="./script/echarts.min.js"></script>
+  <script src="./element/element.min.js"></script>
+  <script>
+    let app = new Vue({
+      el: "#app",
+      data() {
+        let colors = ["#3561ec", "#407fff", "#409eff", "#00b2b7", "#14b089"];
+        return {
+          getRealTimeDataFlag: true,
+          moveFlag: true,
+          closeTimer: null,
+          debounceCloseTimer: null,
+          getRealTimeDataTimer: null,
+          time: {
+            shadowTime: 600000,
+            getRealTimeDataTime: 60000,
+            count: 3
+          },
+          date: "",
+          colors: colors,
+          cardDataCount: 0,
+          recordListCount: 0,
+          cardData: {},
+          cardList: [],
+          detailList: [],
+          recordList: [],
+          charts: {}
+        };
+      },
+      watch: {
+        cardList: {
+          handler(newVal, oldVal) {
+            console.log("触发cardList更新");
+            let opt = this.getCountOpt(newVal);
+            // 更新arr
+            let arr = ["series"];
+            for (const key in opt) {
+              if (Object.prototype.hasOwnProperty.call(opt, key)) {
+                if (arr.indexOf(key) == -1) {
+                  opt[key] = undefined;
+                }
+              }
+            }
+            this.refreshChart("countArea", opt);
+          },
+          deep: true
+        }
+      },
+      mounted() {
+        // 数据加载
+        let date = new Date();
+        // date.setDate(date.getDate() - 2);
+        this.date = window.JAFODateMethod.format(date, "YYYY-MM-DD");
+        let get = () => {
+          this.getRealTimeData();
+          this.closeTimer = setTimeout(() => {
+            this.getRealTimeDataFlag = false;
+            document.querySelector(".homePage .shadow") &&
+              document.querySelector(".homePage .shadow").classList.add("active");
+          }, this.time.shadowTime);
+          clearTimeout(timer);
+        };
+        let timer = setTimeout(get, 500);
+      },
+      methods: {
+        getRealTimeData() {
+          if (this.getRealTimeDataFlag) {
+            if (
+              this.cardDataCount >= this.time.count &&
+              this.recordListCount >= this.time.count
+            ) {
+              this.getRealTimeDataFlag = false;
+              this.moveFlag = false;
+              return;
+            }
+            if (this.cardDataCount < this.time.count) {
+              this.getCount();
+            }
+            if (this.recordListCount < this.time.count) {
+              this.getList();
+            }
+            if (this.getRealTimeDataTimer) {
+              clearTimeout(this.getRealTimeDataTimer);
+              this.getRealTimeDataTimer = null;
+            }
+            this.getRealTimeDataTimer = setTimeout(
+              this.getRealTimeData,
+              this.time.getRealTimeDataTime
+            );
+          }
+        },
+        normal(httpData) {
+          axios
+            .post(httpData.url, httpData.param)
+            .then(res => {
+              if (typeof res != "undefined") {
+                if (typeof httpData.success != "undefined") {
+                  return httpData.success(res.data);
+                }
+              } else {
+                if (typeof httpData.fail != "undefined") {
+                  return httpData.fail(res);
+                }
+              }
+            })
+            .catch(err => {
+              if (typeof httpData.error != "undefined") {
+                httpData.error(err);
+              }
+            })
+            .finally(() => {
+              if (typeof httpData.last != "undefined") {
+                httpData.last();
+              }
+            });
+        },
+        getCount() {
+          let httpData = {
+            url: "record/getCount",
+            param: {
+              date: this.date
+            },
+            success: res => {
+              this.cardDataCount = 0;
+              this.cardData = res || {};
+              let list = [];
+              let detailList = [];
+              if (this.cardData && JSON.stringify(this.cardData) != "{}") {
+                for (const key in this.cardData) {
+                  if (Object.prototype.hasOwnProperty.call(this.cardData, key)) {
+                    const element = this.cardData[key];
+                    list.push(
+                      {
+                        name: element.message,
+                        key: key,
+                        value: element.count
+                      }
+                    )
+                  }
+                }
+                if (list.length > 0) {
+                  let detailObj = this.cardData[list[0].key].detail;
+                  for (const key in detailObj) {
+                    if (Object.prototype.hasOwnProperty.call(detailObj, key)) {
+                      const element = detailObj[key];
+                      detailList.push(element)
+                    }
+                  }
+                }
+              }
+              this.cardList = list;
+              this.detailList = detailList;
+              if (!this.charts.countArea) {
+                let opt = this.getCountOpt(list);
+                this.drawChart("countArea", opt);
+              }
+            },
+            error: err => {
+              console.log(err);
+              this.cardDataCount++;
+            }
+          };
+          this.normal(httpData);
+        },
+        getList() {
+          let httpData = {
+            url: "record/getList",
+            param: {
+              date: this.date
+            },
+            success: res => {
+              this.recordListCount = 0;
+              let list = res || [];
+              this.recordList = list;
+            },
+            error: err => {
+              console.log(err);
+              this.recordListCount++;
+            }
+          };
+          this.normal(httpData);
+        },
+        getCountOpt(data) {
+          let opt = {
+            title: {
+              text: '错误总结',
+              left: 'center'
+            },
+            tooltip: {
+              trigger: 'item'
+            },
+            legend: {
+              orient: 'vertical',
+              left: 'left',
+            },
+            series: [
+              {
+                name: '错误类型:错误数量',
+                type: 'pie',
+                radius: '50%',
+                data: data.length > 0 ? data : [{
+                  name: "暂无错误",
+                  value: 0
+                }],
+                emphasis: {
+                  itemStyle: {
+                    shadowBlur: 10,
+                    shadowOffsetX: 0,
+                    shadowColor: 'rgba(0, 0, 0, 0.5)'
+                  }
+                }
+              }
+            ]
+          };
+          return opt;
+        },
+        drawChart(className, option) {
+          if (document.getElementsByClassName(className)[0]) {
+            this.charts[className] = echarts.init(
+              document.getElementsByClassName(className)[0]
+            );
+            setTimeout(() => {
+              this.charts[className].clear();
+              this.charts[className].setOption(option);
+              this.charts[className].on('click', (param) => {
+                if (param.data.key) {
+                  let detailList = [];
+                  let detailObj = this.cardData[param.data.key].detail;
+                  for (const key in detailObj) {
+                    if (Object.prototype.hasOwnProperty.call(detailObj, key)) {
+                      const element = detailObj[key];
+                      detailList.push(element)
+                    }
+                  }
+                  this.detailList = detailList;
+                }
+              });
+            }, 0);
+          }
+        },
+        refreshChart(className, opt) {
+          if (this.charts[className]) {
+            let option = this.charts[className].getOption();
+            if (option) {
+              for (const key in opt) {
+                if (Object.prototype.hasOwnProperty.call(opt, key)) {
+                  const element = opt[key];
+                  if (element != undefined) {
+                    option[key] = element;
+                  }
+                }
+              }
+              this.charts[className].setOption(option);
+            }
+          }
+        },
+        closeGetData() {
+          // console.log("触发mousemove");
+          if (!this.getRealTimeDataFlag) {
+            this.getRealTimeDataFlag = true;
+            document.querySelector(".homePage .shadow") &&
+              document
+                .querySelector(".homePage .shadow")
+                .classList.remove("active");
+            this.getRealTimeData();
+          } else {
+            clearTimeout(this.debounceCloseTimer);
+            this.debounceCloseTimer = null;
+            this.debounceCloseTimer = setTimeout(() => {
+              // console.log("触发15分钟关闭定时器");
+              clearTimeout(this.closeTimer);
+              this.closeTimer = null;
+              this.closeTimer = setTimeout(() => {
+                this.getRealTimeDataFlag = false;
+                document.querySelector(".homePage .shadow") &&
+                  document
+                    .querySelector(".homePage .shadow")
+                    .classList.add("active");
+              }, this.time.shadowTime);
+            }, 1000);
+          }
+        },
+        riseze(el, cb, time) {
+          // 创建iframe标签，设置样式并插入到被监听元素中
+          var iframe = document.createElement("iframe");
+          iframe.setAttribute(
+            "style",
+            "position:fixed;width: 100%;height: 100%;visibility: hidden;z-index: -1;"
+          );
+          el.appendChild(iframe);
+
+          // 记录元素当前宽高
+          var oldWidth = el.offsetWidth;
+          var oldHeight = el.offsetHeight;
+
+          // iframe 大小变化时的回调函数
+          var sizeChange = function () {
+            // 记录元素变化后的宽高
+            var width = el.offsetWidth;
+            var height = el.offsetHeight;
+            // 不一致时触发回调函数 cb，并更新元素当前宽高
+            if (width !== oldWidth || height !== oldHeight) {
+              cb(
+                { width: width, height: height },
+                { width: oldWidth, height: oldHeight }
+              );
+              oldWidth = width;
+              oldHeight = height;
+            }
+          };
+          // 设置定时器用于节流
+          var timer = 0;
+          // 将 sizeChange 函数挂载到 iframe 的resize回调中
+          iframe.contentWindow.onresize = function () {
+            clearTimeout(timer);
+            timer = setTimeout(sizeChange, time != null ? time : 20);
+          };
+        }
+      },
+      beforeDestroy() {
+        clearTimeout(this.getRealTimeDataTimer);
+        clearTimeout(this.debounceCloseTimer);
+        clearTimeout(this.closeTimer);
+        this.getRealTimeDataTimer = null;
+        this.debounceCloseTimer = null;
+        this.closeTimer = null;
+        this.getRealTimeDataFlag = false;
+      }
+    })
+  </script>
+</body>
+
+</html>
