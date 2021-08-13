@@ -4,7 +4,8 @@
   "description": "错误监控后台",
   "scripts": {
     "index": "node index.js",
-    "lint": "eslint ./ --fix"
+    "lint": "eslint ./ --fix",
+    "clog": "conventional-changelog -p angular -i CHANGELOG.md -s"
   },
   "repository": {
     "type": "git"
