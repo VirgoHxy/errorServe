@@ -1,11 +1,12 @@
 {
   "name": "error",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "错误监控后台",
   "scripts": {
     "index": "node index.js",
     "lint": "eslint ./ --fix",
-    "clog": "conventional-changelog -p angular -i CHANGELOG.md -s"
+    "release": "./release.sh",
+    "clog": "conventional-changelog -p angular -i CHANGELOG.md -s -r 0 && git add CHANGELOG.md"
   },
   "repository": {
     "type": "git"
