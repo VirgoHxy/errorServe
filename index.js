@@ -17,11 +17,13 @@ const {
 
 app.use(KoaStatic(__dirname + '/html'));
 
+// 写日志逻辑
 let log = function (data) {
   let date = format(new Date(), "YYYY-MM-DD");
   writeDBFileSync(`${date}/log.txt`, data);
 };
 
+// 计数逻辑
 let count = function (data) {
   let date = format(new Date(), "YYYY-MM-DD");
   let {
