@@ -223,6 +223,7 @@
               }
             }
           },
+          key: "",
           date: "",
           colors: colors,
           cardDataCount: 0,
@@ -364,8 +365,8 @@
                     )
                   }
                 }
-                if (this.detailList.length == 0 && list.length > 0) {
-                  let detailObj = this.cardData[list[0].key].detail;
+                if (list.length > 0) {
+                  let detailObj = this.cardData[this.key || list[0].key].detail;
                   for (const key in detailObj) {
                     if (Object.prototype.hasOwnProperty.call(detailObj, key)) {
                       const element = detailObj[key];
@@ -450,6 +451,7 @@
               this.charts[className].setOption(option);
               this.charts[className].on('click', (param) => {
                 if (param.data.key) {
+                  this.key = param.data.key;
                   let detailList = [];
                   let detailObj = this.cardData[param.data.key].detail;
                   for (const key in detailObj) {
