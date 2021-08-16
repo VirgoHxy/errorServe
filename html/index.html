@@ -50,6 +50,28 @@
       border-style: none !important;
     }
 
+    .homePage .homeHead {
+      display: flex;
+      align-items: center;
+    }
+
+    .homePage .homeHead i {
+      display: block;
+      font-size: 40px;
+      text-align: center;
+    }
+
+    .homePage .homeHead>span {
+      display: block;
+      width: calc(100% - 200px);
+      font-size: 24px;
+    }
+
+    .homePage .homeHead .el-button {
+      width: 100px;
+      padding: 0;
+    }
+
     .homePage .baseData {
       display: flex;
       flex-wrap: nowrap;
@@ -77,13 +99,20 @@
 
     .homePage .recordList {
       overflow: hidden;
-      height: calc(100% - 310px);
+      height: calc(100% - 362px);
       min-height: 300px;
-      margin: 10px 10px 0 10px;
+      margin: 10px;
       padding: 20px 0;
       box-shadow: 0 2px 12px 0 #ddd;
       background-color: #fff;
       border-radius: 6px;
+    }
+
+    .homePage .recordList .recordHead {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 20px;
     }
 
     .homePage .shadow {
@@ -122,6 +151,11 @@
 <body>
   <div id="app" style="display: none;" :style="{display: 'block'}">
     <div class="homePage" @mousemove="moveFlag && closeGetData()">
+      <div class="homeHead">
+        <el-button type="text"><i class="el-icon-arrow-left" @click="prev"></i></el-button>
+        <span>{{this.date}}</span>
+        <el-button type="text"><i class="el-icon-arrow-right" @click="next"></i></el-button>
+      </div>
       <div class="baseData">
         <div class="countArea"></div>
         <div class="detailList">
@@ -133,12 +167,15 @@
         </div>
       </div>
       <div class="recordList">
-        <h1>错误记录表</h1>
+        <div class="recordHead">
+          <h1>错误记录表</h1>
+          <span>总条数: {{this.recordList.length}}</span>
+        </div>
         <el-table :data="recordList" stripe height="calc(100% - 45px)">
           <el-table-column prop="id" label="唯一标识" width="200"></el-table-column>
           <el-table-column prop="message" label="错误信息"></el-table-column>
-          <el-table-column prop="url" label="错误位置"></el-table-column>
-          <el-table-column prop="detailMessage" label="错误详情"></el-table-column>
+          <el-table-column prop="file|url" label="错误位置" :formatter="table.column['file|url'].formatter">
+          </el-table-column>
           <el-table-column prop="device" label="设备" width="320"></el-table-column>
           <el-table-column prop="param" label="请求错误参数"></el-table-column>
           <el-table-column prop="useTime" label="请求花费时间" width="120"></el-table-column>
@@ -170,6 +207,21 @@
             shadowTime: 600000,
             getRealTimeDataTime: 60000,
             count: 3
+          },
+          table: {
+            column: {
+              "file|url": {
+                formatter(row, column) {
+                  let arr = column.property.split("|");
+                  for (let index = 0; index < arr.length; index++) {
+                    const element = arr[index];
+                    if (row[element]) {
+                      return row[element];
+                    }
+                  }
+                }
+              }
+            }
           },
           date: "",
           colors: colors,
@@ -204,7 +256,6 @@
       mounted() {
         // 数据加载
         let date = new Date();
-        // date.setDate(date.getDate() - 2);
         this.date = window.JAFODateMethod.format(date, "YYYY-MM-DD");
         let get = () => {
           this.getRealTimeData();
@@ -218,6 +269,26 @@
         let timer = setTimeout(get, 500);
       },
       methods: {
+        prev() {
+          let date = new Date(this.date);
+          date.setDate(date.getDate() - 1);
+          this.changeDate(date);
+        },
+        next() {
+          let date = new Date(this.date);
+          date.setDate(date.getDate() + 1);
+          this.changeDate(date);
+        },
+        changeDate(date) {
+          this.cardDataCount = 0;
+          this.recordListCount = 0;
+          this.cardData = {};
+          this.cardList = [];
+          this.detailList = [];
+          this.recordList = [];
+          this.date = window.JAFODateMethod.format(date, "YYYY-MM-DD");
+          this.getRealTimeData();
+        },
         getRealTimeData() {
           if (this.getRealTimeDataFlag) {
             if (
@@ -293,7 +364,7 @@
                     )
                   }
                 }
-                if (list.length > 0) {
+                if (this.detailList.length == 0 && list.length > 0) {
                   let detailObj = this.cardData[list[0].key].detail;
                   for (const key in detailObj) {
                     if (Object.prototype.hasOwnProperty.call(detailObj, key)) {
@@ -350,7 +421,7 @@
             // },
             series: [
               {
-                name: '错误类型:错误数量',
+                name: '错误信息:错误数量',
                 type: 'pie',
                 radius: '50%',
                 data: data.length > 0 ? data : [{
