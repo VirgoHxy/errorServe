@@ -17,7 +17,7 @@ const {
 
 app.use(KoaStatic(__dirname + '/html'));
 
-// 写日志逻辑逻辑
+// 写日志逻辑
 let log = function (data) {
   let date = format(new Date(), "YYYY-MM-DD");
   writeDBFileSync(`${date}/log.txt`, data);
