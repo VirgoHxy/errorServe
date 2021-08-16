@@ -1,8 +1,9 @@
 {
   "name": "error",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "错误监控后台",
   "scripts": {
+    "release": "./release.sh",
     "index": "node index.js",
     "lint": "eslint ./ --fix",
     "clog": "conventional-changelog -p angular -i CHANGELOG.md -s"
