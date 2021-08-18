@@ -53,6 +53,7 @@
     .homePage .homeHead {
       display: flex;
       align-items: center;
+      padding: 10px 10px 0 10px;
     }
 
     .homePage .homeHead i {
@@ -64,12 +65,18 @@
     .homePage .homeHead>span {
       display: block;
       width: calc(100% - 200px);
-      font-size: 24px;
+      font-size: 28px;
     }
 
     .homePage .homeHead .el-button {
       width: 100px;
       padding: 0;
+      background: rgba(0,0,0,0.2);
+      color: #fff;
+    }
+
+    .homePage .homeHead .el-button:hover {
+      background: rgba(0,0,0,0.4);
     }
 
     .homePage .baseData {
@@ -99,7 +106,7 @@
 
     .homePage .recordList {
       overflow: hidden;
-      height: calc(100% - 362px);
+      height: calc(100% - 372px);
       min-height: 300px;
       margin: 10px;
       padding: 20px 0;
@@ -159,7 +166,7 @@
       <div class="baseData">
         <div class="countArea"></div>
         <div class="detailList">
-          <h3>错误详情表</h3>
+          <h3>错误总结详情表</h3>
           <el-table :data="detailList" stripe height="calc(100% - 27px)">
             <el-table-column prop="count" label="错误数量" width="100"></el-table-column>
             <el-table-column prop="message" label="错误详情信息"></el-table-column>
@@ -176,10 +183,11 @@
           <el-table-column prop="message" label="错误信息"></el-table-column>
           <el-table-column prop="file|url" label="错误位置" :formatter="table.column['file|url'].formatter">
           </el-table-column>
+          <el-table-column prop="errorStack" label="错误栈"></el-table-column>
           <el-table-column prop="device" label="设备" width="320"></el-table-column>
+          <el-table-column prop="location" label="错误页面路由"></el-table-column>
           <el-table-column prop="param" label="请求错误参数"></el-table-column>
           <el-table-column prop="useTime" label="请求花费时间" width="120"></el-table-column>
-          <el-table-column prop="location" label="错误页面路由"></el-table-column>
         </el-table>
       </div>
       <div class="shadow">
@@ -268,6 +276,19 @@
           clearTimeout(timer);
         };
         let timer = setTimeout(get, 500);
+        this.riseze(
+          document.querySelector(".homePage"),
+          () => {
+            // console.log("触发resize")
+            for (const key in this.charts) {
+              if (Object.prototype.hasOwnProperty.call(this.charts, key)) {
+                const element = this.charts[key];
+                element && element.resize();
+              }
+            }
+          },
+          0
+        );
       },
       methods: {
         prev() {
