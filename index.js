@@ -57,6 +57,14 @@ let count = function (data) {
   writeDBFileSync(`${date}/count.json`, result, true);
 };
 
+let _getErrorKey = function (str) {
+  let num = 0;
+  for (let i = 0; i < str.length; i++) {
+    num += str[i].charCodeAt();
+  }
+  return num;
+}
+
 // 设置请求参数
 app.use(async (ctx, next) => {
   ctx.set("Access-Control-Allow-Origin", "*");
@@ -152,6 +160,7 @@ router.post('/record/getList', async (ctx) => {
     if (!fs.existsSync(`./db/${date}/log.txt`)) {
       throw new Error(`./db/${date}/log.txt 路径不存在`)
     }
+    let logCountObj = {};
     let res = await new Promise((resolve, reject) => {
       fs
         .createReadStream(`./db/${date}/log.txt`)
@@ -160,8 +169,13 @@ router.post('/record/getList', async (ctx) => {
           es
           .mapSync(function (line) {
             // console.time('line count');
-            totalLines++;
-            list.unshift(typeof line == "string" ? JSON.parse(line) : line);
+            let data = typeof line == "string" ? JSON.parse(line) : line;
+            let key = _getErrorKey(data.message);
+            logCountObj[key] = (logCountObj[key] || 0) + 1;
+            if (logCountObj[key] <= 500) {
+              totalLines++;
+              list.unshift(data);
+            }
           })
           .on('error', function (err) {
             console.error('Error while reading file.', err);
