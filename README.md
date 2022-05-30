@@ -1,1 +1,1 @@
-# errorServe 错误监控后台
+# errorServe 错误监控后台 + errorSend 错误捕获发送
